@@ -20,6 +20,12 @@ public:
     MainWindow(QWidget *parent = nullptr);
 
 private:
+    void connectSlots();
+
+private:
     std::unique_ptr<Ui::MainWindow> ui{nullptr};
+
+private slots:
+    void showFakeDisplayOffDialog();
 };
 #endif // MAINWINDOW_HPP
