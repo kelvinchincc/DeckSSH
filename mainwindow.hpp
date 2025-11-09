@@ -27,5 +27,6 @@ private:
 
 private slots:
     void showFakeDisplayOffDialog();
+    void querySSHDStatus();
 };
 #endif // MAINWINDOW_HPP
