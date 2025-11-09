@@ -6,11 +6,14 @@
 
 #include "fakedisplayoffoverlay.hpp"
 
+const QString serviceName { "ssh.socket" };
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui { std::make_unique<Ui::MainWindow>() }
 {
     ui->setupUi(this);
-    this->connectSlots();
+    connectSlots();
+    querySSHDStatus();
 }
 
 void MainWindow::connectSlots()
@@ -18,6 +21,10 @@ void MainWindow::connectSlots()
     connect(ui->turnOffDisplayBtn, &QPushButton::clicked, this,
             &MainWindow::showFakeDisplayOffDialog);
     connect(ui->getSSHStatusBtn, &QPushButton::clicked, this, &MainWindow::querySSHDStatus);
+    connect(ui->startSSHBtn, &QPushButton::clicked, this, &MainWindow::startSSHDService);
+    connect(ui->stopSSHBtn, &QPushButton::clicked, this, &MainWindow::stopSSHDService);
+    connect(ui->showAuthKeyManager, &QPushButton::clicked, this,
+            [this]() { ui->logViewer->append("Comming soon!"); });
 }
 
 void MainWindow::showFakeDisplayOffDialog()
@@ -40,11 +47,9 @@ void MainWindow::showFakeDisplayOffDialog()
 
 void MainWindow::querySSHDStatus()
 {
+    ui->logViewer->append(QStringLiteral("Quering systemctl on %1 status.").arg(serviceName));
     QProcess query;
-    auto serviceName = QStringLiteral("ssh.socket");
-
-    query.start("/usr/bin/env", { "pkexec", "systemctl", "is-active", serviceName });
-    ui->logViewer->append("Quering systemctl on sshd status.");
+    query.start("/usr/bin/env", { "systemctl", "is-active", serviceName });
 
     if (!query.waitForFinished(5000)) {
         query.kill();
@@ -57,7 +62,7 @@ void MainWindow::querySSHDStatus()
         return;
     }
 
-    ui->logViewer->append("Done!");
+    ui->logViewer->append("Query completed.");
 
     auto stdErr = query.readAllStandardError().trimmed();
     auto stdOut = query.readAllStandardOutput().trimmed();
@@ -65,4 +70,14 @@ void MainWindow::querySSHDStatus()
     if (!stdErr.isEmpty()) ui->logViewer->append(stdErr);
     if (!stdOut.isEmpty())
         ui->logViewer->append(QStringLiteral("%1 is %2").arg(serviceName).arg(stdOut));
+}
+
+void MainWindow::startSSHDService()
+{
+    ui->logViewer->append("Not implemented yet!");
+}
+
+void MainWindow::stopSSHDService()
+{
+    ui->logViewer->append("Not implemented yet!");
 }

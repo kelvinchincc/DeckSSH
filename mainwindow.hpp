@@ -28,5 +28,7 @@ private:
 private slots:
     void showFakeDisplayOffDialog();
     void querySSHDStatus();
+    void startSSHDService();
+    void stopSSHDService();
 };
 #endif // MAINWINDOW_HPP
