@@ -28,8 +28,10 @@ void MainWindow::showFakeDisplayOffDialog()
     }
 
     overlay->setAttribute(Qt::WA_DeleteOnClose);
-    overlay->setGeometry(screen->geometry());
-    overlay->showFullScreen();
+    // overlay->setGeometry(screen->geometry());
+    // overlay->showFullScreen();
+    overlay->setGeometry(this->rect());
+    overlay->show();
     overlay->raise();
     overlay->activateWindow();
 }

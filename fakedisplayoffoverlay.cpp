@@ -9,14 +9,15 @@ FakeDisplayOffOverlay::FakeDisplayOffOverlay(QWidget *parent)
     , ui(new Ui::FakeDisplayOffOverlay)
 {
     ui->setupUi(this);
-    this->setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
+    // this->setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
+    this->setWindowFlags(Qt::Window);
     this->setWindowModality(Qt::WindowModal);
     this->setMouseTracking(true);
     ui->closeBtn->setMouseTracking(true);
     ui->closeBtn->installEventFilter(this);
     this->setAttribute(Qt::WA_Hover, true);
 
-    QTimer::singleShot(5000, [&]() { this->hideOverlayHint(); });
+    QTimer::singleShot(5000, this, &FakeDisplayOffOverlay::hideOverlayHint);
     hideCursorTimer.setInterval(2000);
     connect(&hideCursorTimer, &QTimer::timeout, this, &FakeDisplayOffOverlay::hideMouseCursor);
     hideCursorTimer.start();
