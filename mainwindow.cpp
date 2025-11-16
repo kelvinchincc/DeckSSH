@@ -3,10 +3,9 @@
 #include <QPushButton>
 #include <QScreen>
 #include <QProcess>
+#include <QStringList>
 
 #include "fakedisplayoffoverlay.hpp"
-
-const QString serviceName { "ssh.socket" };
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui { std::make_unique<Ui::MainWindow>() }
@@ -25,6 +24,29 @@ void MainWindow::connectSlots()
     connect(ui->stopSSHBtn, &QPushButton::clicked, this, &MainWindow::stopSSHDService);
     connect(ui->showAuthKeyManager, &QPushButton::clicked, this,
             [this]() { ui->logViewer->append("Comming soon!"); });
+}
+
+const QString MainWindow::checkSSHType()
+{
+    QStringList sshServices { "sshd.service", "ssh.socket" };
+
+    for (const auto sshService : sshServices) {
+        QProcess serviceQuery;
+        serviceQuery.start("/usr/bin/env", { "systemctl", "status", sshService });
+        if (!serviceQuery.waitForFinished(5000)) {
+            serviceQuery.kill();
+            continue;
+        }
+        if (serviceQuery.exitStatus() != QProcess::NormalExit) {
+            continue;
+        }
+        auto stdOut = serviceQuery.readAllStandardOutput().trimmed();
+        if (stdOut.contains("Loaded: loaded")) {
+            return sshService;
+        }
+    }
+
+    return "";
 }
 
 void MainWindow::showFakeDisplayOffDialog()
@@ -47,7 +69,15 @@ void MainWindow::showFakeDisplayOffDialog()
 
 void MainWindow::querySSHDStatus()
 {
+    auto serviceName = checkSSHType();
+    if (serviceName.isEmpty()) {
+        ui->logViewer->append(
+                QStringLiteral("<span style='color: red'>No supported ssh service found.</span>"));
+        return;
+    }
+
     ui->logViewer->append(QStringLiteral("Quering systemctl on %1 status.").arg(serviceName));
+
     QProcess query;
     query.start("/usr/bin/env", { "systemctl", "is-active", serviceName });
 
@@ -67,17 +97,96 @@ void MainWindow::querySSHDStatus()
     auto stdErr = query.readAllStandardError().trimmed();
     auto stdOut = query.readAllStandardOutput().trimmed();
 
-    if (!stdErr.isEmpty()) ui->logViewer->append(stdErr);
+    if (!stdErr.isEmpty())
+        ui->logViewer->append(QStringLiteral("<span style='color: red'>%1</span>").arg(stdErr));
+
     if (!stdOut.isEmpty())
-        ui->logViewer->append(QStringLiteral("%1 is %2").arg(serviceName).arg(stdOut));
+        ui->logViewer->append(QStringLiteral("<span style=\"color: %1\">%2 is %3</span>")
+                        .arg(stdOut == "active" ? "green" : "red")
+                        .arg(serviceName)
+                        .arg(stdOut));
 }
 
 void MainWindow::startSSHDService()
 {
-    ui->logViewer->append("Not implemented yet!");
+    auto sshService = checkSSHType();
+
+    if (sshService.isEmpty()) {
+        ui->logViewer->append(
+                QStringLiteral("<span style='color: red'>No supported ssh service found.</span>"));
+        return;
+    }
+
+    ui->logViewer->append(QStringLiteral("Starting SSH service using %1").arg(sshService));
+
+    QProcess startProcess;
+    startProcess.start("/usr/bin/env", { "systemctl", "enable", "--now", sshService });
+
+    if (!startProcess.waitForFinished(5 * 60000)) {
+        startProcess.kill();
+        ui->logViewer->append("<span style=\"color: red;\">Killed, process timed out!</span>");
+        return;
+    }
+
+    if (startProcess.exitStatus() != QProcess::NormalExit) {
+        ui->logViewer->append(
+                QString("<span style='color: red'>Start process crashed with code %1</span>")
+                        .arg(startProcess.exitCode()));
+        return;
+    }
+
+    auto stdErr = startProcess.readAllStandardError().trimmed();
+    auto stdOut = startProcess.readAllStandardOutput().trimmed();
+
+    if (!stdErr.isEmpty())
+        ui->logViewer->append(QStringLiteral("<span style='color: red'>%1</span>").arg(stdErr));
+
+    if (!stdOut.isEmpty())
+        ui->logViewer->append(QStringLiteral("<span style='color: green'>%1</span>").arg(stdOut));
+
+    querySSHDStatus();
+
+    ui->logViewer->append("Start command completed.");
 }
 
 void MainWindow::stopSSHDService()
 {
-    ui->logViewer->append("Not implemented yet!");
+    auto sshService = checkSSHType();
+
+    if (sshService.isEmpty()) {
+        ui->logViewer->append(
+                QStringLiteral("<span style='color: red'>No supported ssh service found.</span>"));
+        return;
+    }
+
+    ui->logViewer->append(QStringLiteral("Stopping SSH service using %1").arg(sshService));
+
+    QProcess startProcess;
+    startProcess.start("/usr/bin/env", { "systemctl", "disable", "--now", sshService });
+
+    if (!startProcess.waitForFinished(5 * 60000)) {
+        startProcess.kill();
+        ui->logViewer->append("<span style=\"color: red;\">Killed, process timed out!</span>");
+        return;
+    }
+
+    if (startProcess.exitStatus() != QProcess::NormalExit) {
+        ui->logViewer->append(
+                QString("<span style='color: red'>Stop process crashed with code %1</span>")
+                        .arg(startProcess.exitCode()));
+        return;
+    }
+
+    auto stdErr = startProcess.readAllStandardError().trimmed();
+    auto stdOut = startProcess.readAllStandardOutput().trimmed();
+
+    if (!stdErr.isEmpty())
+        ui->logViewer->append(QStringLiteral("<span style='color: red'>%1</span>").arg(stdErr));
+
+    if (!stdOut.isEmpty())
+        ui->logViewer->append(QStringLiteral("<span style='color: green'>%1</span>").arg(stdOut));
+
+    querySSHDStatus();
+
+    ui->logViewer->append("Stop command completed.");
 }

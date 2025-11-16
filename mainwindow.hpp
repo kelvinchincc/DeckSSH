@@ -21,6 +21,7 @@ public:
 
 private:
     void connectSlots();
+    const QString checkSSHType();
 
 private:
     std::unique_ptr<Ui::MainWindow> ui{nullptr};
